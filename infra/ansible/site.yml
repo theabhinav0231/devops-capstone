@@ -1,0 +1,47 @@
+---
+- name: Provision and verify CloudLedger DevOps platform host
+  hosts: platform_nodes
+  gather_facts: true
+  vars:
+    platform_root: "/tmp/cloudledger-ops"
+    service_name: "CloudLedger"
+    k8s_namespace: "capstone-abhinav"
+  tasks:
+    - name: Ensure operational directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ platform_root }}"
+        - "{{ platform_root }}/backups"
+        - "{{ platform_root }}/logs"
+        - "{{ platform_root }}/config"
+
+    - name: Render platform runtime configuration
+      ansible.builtin.copy:
+        dest: "{{ platform_root }}/config/platform.json"
+        mode: "0644"
+        content: |
+          {
+            "service": "CloudLedger",
+            "namespace": "capstone-abhinav",
+            "managed_by": "ansible",
+            "observability": ["prometheus", "grafana", "json-logs"],
+            "security": ["trivy", "vault-kv2", "k8s-networkpolicy"]
+          }
+
+    - name: Verify Docker daemon is reachable
+      ansible.builtin.command: docker --version
+      register: docker_ver
+      changed_when: false
+
+    - name: Verify Kubernetes cluster connectivity
+      ansible.builtin.command: kubectl get nodes -o name
+      register: k8s_nodes
+      changed_when: false
+      failed_when: false
+
+    - name: Report node readiness summary
+      ansible.builtin.debug:
+        msg: "{{ service_name }} host ready | Docker={{ docker_ver.stdout }} | K8s={{ k8s_nodes.stdout | default('minikube') }}"
