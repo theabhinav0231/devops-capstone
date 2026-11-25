@@ -1,0 +1,25 @@
+name: CloudLedger CI-CD Pipeline
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r app/requirements.txt pytest
+      - name: Unit & Integration Gates
+        run: PYTHONPATH=. pytest tests/ -v --junitxml=junit.xml
+      - name: Build Hardened Image
+        run: docker build --build-arg APP_VERSION=1.1.0 -t cloudledger-app:1.1.0 .
+      - name: IaC & Container Security Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'config'
+          scan-ref: 'k8s/'
+          severity: 'HIGH,CRITICAL'

@@ -1,0 +1,40 @@
+services:
+  cloudledger:
+    build:
+      context: .
+      args:
+        APP_VERSION: "1.0.0"
+    image: cloudledger-app:1.0.0
+    environment:
+      - APP_VERSION=1.0.0
+      - DEPLOY_SLOT=local-compose
+      - DB_PATH=/data/cloudledger.db
+      - API_SIGNING_KEY=${API_SIGNING_KEY:-compose-dev-key}
+    ports:
+      - "5000:5000"
+    volumes:
+      - app_data:/data
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - cloudledger
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  app_data:
