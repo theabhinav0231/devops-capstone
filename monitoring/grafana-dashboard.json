@@ -1,0 +1,47 @@
+{
+  "title": "CloudLedger - DevOps Observability Dashboard",
+  "uid": "cloudledger-obs",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total Requests",
+      "targets": [
+        {
+          "expr": "cloudledger_http_requests_total"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "5xx Errors",
+      "targets": [
+        {
+          "expr": "cloudledger_http_errors_total"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Cumulative Latency (s)",
+      "targets": [
+        {
+          "expr": "cloudledger_http_request_duration_seconds_sum"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "gauge",
+      "title": "Persisted DB Records",
+      "targets": [
+        {
+          "expr": "cloudledger_records_total"
+        }
+      ]
+    }
+  ]
+}
