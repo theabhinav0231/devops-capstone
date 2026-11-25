@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudledger-stable
+  namespace: capstone-abhinav
+  labels:
+    app: cloudledger
+    track: stable
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cloudledger
+      track: stable
+  template:
+    metadata:
+      labels:
+        app: cloudledger
+        track: stable
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: cloudledger
+          image: cloudledger-app:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: cloudledger-config
+            - secretRef:
+                name: cloudledger-vault-secret
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: DEPLOY_SLOT
+              value: "stable"
+            - name: FAULT_RATE
+              value: "0.0"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5

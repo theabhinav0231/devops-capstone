@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudledger-config
+  namespace: capstone-abhinav
+data:
+  DB_PATH: "/data/cloudledger.db"
+  LOG_FORMAT: "json"
+  METRICS_PATH: "/metrics"
