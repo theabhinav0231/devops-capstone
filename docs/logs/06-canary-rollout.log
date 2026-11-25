@@ -1,0 +1,16 @@
+$ kubectl get svc cloudledger-stable cloudledger-canary -n capstone-abhinav
+NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+cloudledger-stable   ClusterIP   10.107.214.0    <none>        80/TCP    3m59s
+cloudledger-canary   ClusterIP   10.100.118.16   <none>        80/TCP    3m59s
+
+$ # Run weighted Canary controller (Phase 1: 10% -> Phase 2: 50% -> Phase 3: Faulty 30% -> Auto-Rollback)
+[PHASE1-10PCT] total=40 stable_hits=36 canary_hits=4 ok=40 errors=0 error_rate=0.0%
+>>> GATE_1 PASSED (error_rate <= 5.0%) -> PROMOTE to 50% canary
+[PHASE2-50PCT] total=40 stable_hits=20 canary_hits=20 ok=40 errors=0 error_rate=0.0%
+>>> GATE_2 PASSED (error_rate <= 5.0%) -> Canary v1.1.0 healthy
+
+>>> Injecting fault (FAULT_RATE=0.6) into canary deployment to test SLO rollback gate...
+[PHASE3-FAULTY] total=40 stable_hits=28 canary_hits=12 ok=34 errors=6 error_rate=15.0%
+>>> ROLLBACK_TRIGGERED error_rate=15.0% > 5.0% SLO threshold -> scaling canary=0 & routing 100% to stable v1.0.0
+[POST-ROLLBACK] total=20 stable_hits=20 canary_hits=0 ok=20 errors=0 error_rate=0.0%
+>>> CANARY_ROLLBACK_RECOVERED 100% traffic on stable v1.0.0 with 0.0% errors

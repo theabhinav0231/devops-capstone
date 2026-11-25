@@ -1,0 +1,72 @@
+$ cd infra/terraform && terraform init -input=false -no-color
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+
+$ terraform apply -auto-approve -no-color
+null_resource.provision_docker_network: Creating...
+null_resource.provision_docker_network: Provisioning with 'local-exec'...
+null_resource.provision_docker_network (local-exec): Executing: ["/bin/sh" "-c" "docker network inspect cloudledger-net >/dev/null 2>&1 || docker network create cloudledger-net"]
+local_file.slo_policy: Creating...
+local_file.runtime_env: Creating...
+local_file.runtime_env: Creation complete after 0s [id=27a87b3a5471345757c16d9d15a048bc2acf45be]
+local_file.slo_policy: Creation complete after 0s [id=a9e4c08456ebf59505c25e22dbafcc4a19d417f0]
+null_resource.provision_docker_network: Creation complete after 0s [id=3678661320462508160]
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+docker_network = "cloudledger-net"
+runtime_env_file = "./generated/runtime.env"
+slo_policy_file = "./generated/slo-policy.json"
+
+$ ansible-playbook -i infra/ansible/inventory.ini infra/ansible/site.yml
+
+PLAY [Provision and verify CloudLedger DevOps platform host] *******************
+
+TASK [Gathering Facts] *********************************************************
+ok: [localhost]
+
+TASK [Ensure operational directories exist] ************************************
+changed: [localhost] => (item=/tmp/cloudledger-ops)
+changed: [localhost] => (item=/tmp/cloudledger-ops/backups)
+changed: [localhost] => (item=/tmp/cloudledger-ops/logs)
+changed: [localhost] => (item=/tmp/cloudledger-ops/config)
+
+TASK [Render platform runtime configuration] ***********************************
+changed: [localhost]
+
+TASK [Verify Docker daemon is reachable] ***************************************
+ok: [localhost]
+
+TASK [Verify Kubernetes cluster connectivity] **********************************
+ok: [localhost]
+
+TASK [Report node readiness summary] *******************************************
+ok: [localhost] => {
+    "msg": "CloudLedger host ready | Docker=Docker version 29.9.2, build a82e528 | K8s=node/minikube"
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=6    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+
+$ # Idempotency check (2nd Ansible run must report changed=0)
+$ ansible-playbook -i infra/ansible/inventory.ini infra/ansible/site.yml | tail -n 6
+    "msg": "CloudLedger host ready | Docker=Docker version 29.9.2, build a82e528 | K8s=node/minikube"
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+>>> IAC_VERIFIED terraform=applied ansible_idempotent=PASSED

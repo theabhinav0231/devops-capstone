@@ -1,0 +1,47 @@
+$ git log --oneline --graph -n 10
+* 7e9ec0b docs(readme): add end-to-end architecture and execution guide for CloudLedger capstone
+* a179bbc ops(gitops,dr): add GitOps drift reconciler and SHA-256 verified SQLite DR backup/failover scripts
+* 25407e8 sec(vault): add least-privilege Vault KV v2 HCL policy and Kubernetes secret sync script
+* cb92128 obs(monitoring,logging): configure Prometheus scraping, SLO alerts, Grafana dashboard, and Logstash pipeline
+* 1b6d9cd k8s(manifests): add namespace, deployments (stable/canary), services, HPA, and NetworkPolicy
+* 01651bf infra(iac): add Terraform IaC definitions and idempotent Ansible provisioning playbook
+* 7b72316 ci(pipeline): add hardened non-root Dockerfile, Compose stack, Jenkinsfile, and GitHub Actions
+* 6450336 feat(app): implement CloudLedger microservice with Prometheus metrics, JSON logging, and pytest gates
+
+$ # Gate Demo 1: Inject deliberate /health regression to verify CI blocks deployment
+$ PYTHONPATH=. .venv/bin/pytest tests/test_unit.py -q
+F.....                                                                   [100%]
+=================================== FAILURES ===================================
+____________________________ test_health_returns_up ____________________________
+tests/test_unit.py:26: in test_health_returns_up
+    assert r.get_json()["status"] == "UP"
+E   AssertionError: assert 'DEGRADED' == 'UP'
+E     
+E     - UP
+E     + DEGRADED
+----------------------------- Captured stdout call -----------------------------
+{"ts": "2026-11-25T18:03:34.819068+00:00", "level": "INFO", "service": "cloudledger", "version": "1.0.0", "slot": "stable", "method": "GET", "path": "/health", "status": 200, "latency_ms": 0.11, "trace_id": "2e1641617967"}
+=========================== short test summary info ============================
+FAILED tests/test_unit.py::test_health_returns_up - AssertionError: assert 'D...
+1 failed, 5 passed in 0.29s
+>>> CI_UNIT_GATE_EXIT=1 -> DEPLOYMENT BLOCKED BY AUTOMATED TEST GATE
+
+$ # Restore /health fix and re-run full unit + integration gates
+$ PYTHONPATH=. .venv/bin/pytest tests/ -v --junitxml=docs/logs/junit.xml
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /home/abhinav/devops-capstone/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/abhinav/devops-capstone
+collecting ... collected 7 items
+
+tests/test_integration.py::test_sqlite_online_backup_and_restore_integrity PASSED [ 14%]
+tests/test_unit.py::test_health_returns_up PASSED                        [ 28%]
+tests/test_unit.py::test_ready_probe PASSED                              [ 42%]
+tests/test_unit.py::test_index_has_secret_fingerprint_not_plaintext PASSED [ 57%]
+tests/test_unit.py::test_create_and_list_transactions PASSED             [ 71%]
+tests/test_unit.py::test_validation_rejects_bad_payload PASSED           [ 85%]
+tests/test_unit.py::test_prometheus_metrics_exposed PASSED               [100%]
+
+---- generated xml file: /home/abhinav/devops-capstone/docs/logs/junit.xml -----
+============================== 7 passed in 0.36s ===============================
+>>> ALL_CI_GATES_PASSED -> ARTIFACT docs/logs/junit.xml GENERATED

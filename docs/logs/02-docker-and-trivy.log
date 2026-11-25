@@ -1,0 +1,145 @@
+$ docker build --build-arg APP_VERSION=1.0.0 -t cloudledger-app:1.0.0 .
+#11 DONE 0.7s
+
+#12 exporting to image
+#12 exporting layers
+#12 exporting layers 1.3s done
+#12 exporting manifest sha256:58edf8605d6206f93c96f15a7c2fbefb1e9b4f4b01aaa7ee3804ecbbe9ecf6f3 0.1s done
+#12 exporting config sha256:b9e081b05247eaa6861af6451d2d045c398da322c8dd80742e058217843fc2d1 0.1s done
+#12 exporting attestation manifest sha256:9d74d8944b7f14bf3cd793ea6f5cb4dba88b1660bf929fa668727d00a5d10bbe 0.1s done
+#12 exporting manifest list sha256:77790456f627e365b57f8ffb6789a8a89d4f6e0dc90cf8cbffdeac7466384699
+#12 exporting manifest list sha256:77790456f627e365b57f8ffb6789a8a89d4f6e0dc90cf8cbffdeac7466384699 0.0s done
+#12 naming to docker.io/library/cloudledger-app:1.0.0 done
+#12 unpacking to docker.io/library/cloudledger-app:1.0.0
+#12 unpacking to docker.io/library/cloudledger-app:1.0.0 0.5s done
+#12 DONE 2.2s
+
+$ docker build --build-arg APP_VERSION=1.1.0 -t cloudledger-app:1.1.0 .
+#12 exporting manifest sha256:c6b953b31f90b4784eb1ecb80049cb4881fc96ea50d1edbeb19f6c4f8eab2bad 0.0s done
+#12 exporting config sha256:c945f1cb3458a7b469f71f33ba955e9a7554d0c04cc51a66a41d9262eab4f6fc 0.0s done
+#12 exporting attestation manifest sha256:4c0b0ebab7f9e18818765732e236071645796f6b245081f5ee7e355d10e51578
+#12 exporting attestation manifest sha256:4c0b0ebab7f9e18818765732e236071645796f6b245081f5ee7e355d10e51578 0.1s done
+#12 exporting manifest list sha256:d38ecabb91928bd82caf7c35dfbf4c7f1f1971d4e67f5558a8811516a07645bf 0.0s done
+#12 naming to docker.io/library/cloudledger-app:1.1.0
+#12 naming to docker.io/library/cloudledger-app:1.1.0 done
+#12 unpacking to docker.io/library/cloudledger-app:1.1.0
+#12 unpacking to docker.io/library/cloudledger-app:1.1.0 0.4s done
+#12 DONE 1.7s
+
+$ docker images cloudledger-app
+IMAGE                   ID             DISK USAGE   CONTENT SIZE   EXTRA
+cloudledger-app:1.0.0   77790456f627        185MB         44.9MB        
+cloudledger-app:1.1.0   d38ecabb9192        185MB         44.9MB        
+
+$ trivy config --severity HIGH,CRITICAL k8s/
+
+Report Summary
+
+┌────────────────────────┬────────────┬───────────────────┐
+│         Target         │    Type    │ Misconfigurations │
+├────────────────────────┼────────────┼───────────────────┤
+│ configmap.yaml         │ kubernetes │         0         │
+├────────────────────────┼────────────┼───────────────────┤
+│ deployment-canary.yaml │ kubernetes │         1         │
+├────────────────────────┼────────────┼───────────────────┤
+│ deployment-stable.yaml │ kubernetes │         1         │
+├────────────────────────┼────────────┼───────────────────┤
+│ hpa.yaml               │ kubernetes │         0         │
+├────────────────────────┼────────────┼───────────────────┤
+│ namespace.yaml         │ kubernetes │         0         │
+├────────────────────────┼────────────┼───────────────────┤
+│ networkpolicy.yaml     │ kubernetes │         0         │
+├────────────────────────┼────────────┼───────────────────┤
+│ secret-bootstrap.yaml  │ kubernetes │         0         │
+├────────────────────────┼────────────┼───────────────────┤
+│ services.yaml          │ kubernetes │         0         │
+└────────────────────────┴────────────┴───────────────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+
+
+deployment-canary.yaml (kubernetes)
+===================================
+Tests: 24 (SUCCESSES: 23, FAILURES: 1)
+Failures: 1 (HIGH: 1, CRITICAL: 0)
+
+KSV-0014 (HIGH): Container 'cloudledger' of Deployment 'cloudledger-canary' should set 'securityContext.readOnlyRootFilesystem' to true
+════════════════════════════════════════
+An immutable root file system prevents applications from writing to their local disk. This can limit intrusions, as attackers will not be able to tamper with the file system or write foreign executables to disk.
+
+See https://avd.aquasec.com/misconfig/ksv-0014
+────────────────────────────────────────
+ deployment-canary.yaml:29-64
+────────────────────────────────────────
+  29 ┌         - name: cloudledger
+  30 │           image: cloudledger-app:1.1.0
+  31 │           imagePullPolicy: IfNotPresent
+  32 │           ports:
+  33 │             - containerPort: 5000
+  34 │           envFrom:
+  35 │             - configMapRef:
+  36 │                 name: cloudledger-config
+  37 └             - secretRef:
+  ..   
+────────────────────────────────────────
+
+
+
+deployment-stable.yaml (kubernetes)
+===================================
+Tests: 24 (SUCCESSES: 23, FAILURES: 1)
+Failures: 1 (HIGH: 1, CRITICAL: 0)
+
+KSV-0014 (HIGH): Container 'cloudledger' of Deployment 'cloudledger-stable' should set 'securityContext.readOnlyRootFilesystem' to true
+════════════════════════════════════════
+An immutable root file system prevents applications from writing to their local disk. This can limit intrusions, as attackers will not be able to tamper with the file system or write foreign executables to disk.
+
+See https://avd.aquasec.com/misconfig/ksv-0014
+────────────────────────────────────────
+ deployment-stable.yaml:29-64
+────────────────────────────────────────
+  29 ┌         - name: cloudledger
+  30 │           image: cloudledger-app:1.0.0
+  31 │           imagePullPolicy: IfNotPresent
+  32 │           ports:
+  33 │             - containerPort: 5000
+  34 │           envFrom:
+  35 │             - configMapRef:
+  36 │                 name: cloudledger-config
+  37 └             - secretRef:
+  ..   
+────────────────────────────────────────
+
+
+
+$ trivy image --severity HIGH,CRITICAL --ignore-unfixed --quiet cloudledger-app:1.1.0
+
+Report Summary
+
+┌──────────────────────────────────────────────────────────────────────────────┬────────────┬─────────────────┬─────────┐
+│                                    Target                                    │    Type    │ Vulnerabilities │ Secrets │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ cloudledger-app:1.1.0 (debian 13.8)                                          │   debian   │        1        │    -    │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ usr/local/lib/python3.12/site-packages/blinker-1.9.0.dist-info/METADATA      │ python-pkg │        0        │    -    │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ usr/local/lib/python3.12/site-packages/click-8.5.1.dist-info/METADATA        │ python-pkg │        0        │    -    │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ usr/local/lib/python3.12/site-packages/flask-3.0.3.dist-info/METADATA        │ python-pkg │        0        │    -    │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ usr/local/lib/python3.12/site-packages/itsdangerous-2.2.0.dist-info/METADATA │ python-pkg │        0        │    -    │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ usr/local/lib/python3.12/site-packages/jinja2-3.1.6.dist-info/METADATA       │ python-pkg │        0        │    -    │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ usr/local/lib/python3.12/site-packages/markupsafe-3.0.4.dist-info/METADATA   │ python-pkg │        0        │    -    │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ usr/local/lib/python3.12/site-packages/pip-25.0.1.dist-info/METADATA         │ python-pkg │        0        │    -    │
+├──────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┼─────────┤
+│ usr/local/lib/python3.12/site-packages/werkzeug-3.0.3.dist-info/METADATA     │ python-pkg │        0        │    -    │
+└──────────────────────────────────────────────────────────────────────────────┴────────────┴─────────────────┴─────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+
+>>> TRIVY_SCAN_COMPLETED image=cloudledger-app:1.1.0 non_root_user=appuser

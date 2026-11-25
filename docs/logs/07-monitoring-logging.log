@@ -1,0 +1,42 @@
+$ # Seed 5 domain records and generate live API traffic
+{"account":"ACC-501","amount":1250.0,"currency":"INR","signature":"b4b900b830a94d71","slot":"primary","status":"committed","tx_id":"TX-101"}
+
+{"account":"ACC-502","amount":2500.0,"currency":"INR","signature":"727c0454d4574cab","slot":"primary","status":"committed","tx_id":"TX-102"}
+
+{"account":"ACC-503","amount":3750.0,"currency":"INR","signature":"0077fcdae157d628","slot":"primary","status":"committed","tx_id":"TX-103"}
+
+{"account":"ACC-504","amount":5000.0,"currency":"INR","signature":"7e58eee5ae9f12e5","slot":"primary","status":"committed","tx_id":"TX-104"}
+
+{"account":"ACC-505","amount":6250.0,"currency":"INR","signature":"0b21086eaaad95d3","slot":"primary","status":"committed","tx_id":"TX-105"}
+
+
+$ curl -s http://127.0.0.1:15100/metrics
+# HELP cloudledger_http_requests_total Total HTTP requests served
+# TYPE cloudledger_http_requests_total counter
+cloudledger_http_requests_total{version="1.0.0",slot="primary"} 15
+# HELP cloudledger_http_errors_total Total HTTP 5xx errors
+# TYPE cloudledger_http_errors_total counter
+cloudledger_http_errors_total{version="1.0.0",slot="primary"} 0
+# HELP cloudledger_http_request_duration_seconds_sum Cumulative request latency in seconds
+# TYPE cloudledger_http_request_duration_seconds_sum counter
+cloudledger_http_request_duration_seconds_sum{version="1.0.0",slot="primary"} 0.090469
+# HELP cloudledger_records_total Current persisted records in SQLite
+# TYPE cloudledger_records_total gauge
+cloudledger_records_total{slot="primary"} 5
+
+$ # Query Prometheus HTTP API for scrape health (up) and request counter
+$ curl -s 'http://127.0.0.1:19091/api/v1/query?query=up' | jq -c '.data.result[] | {job:.metric.job, up:.value[1]}'
+{"job":"cloudledger","up":"1"}
+$ curl -s 'http://127.0.0.1:19091/api/v1/query?query=cloudledger_http_requests_total' | jq -c '.data.result[] | {metric:.metric.__name__, value:.value[1]}'
+{"metric":"cloudledger_http_requests_total","value":"15"}
+$ curl -s 'http://127.0.0.1:19091/api/v1/rules' | jq -c '.data.groups[].rules[] | {alert:.name, state:.state}'
+{"alert":"HighErrorRate","state":"inactive"}
+{"alert":"ServiceDown","state":"inactive"}
+
+$ # Structured JSON application logs (tail -n 5)
+{"ts": "2026-11-25T18:06:22.315157+00:00", "level": "INFO", "service": "cloudledger", "version": "1.0.0", "slot": "primary", "method": "GET", "path": "/health", "status": 200, "latency_ms": 0.13, "trace_id": "e71e264c4a28"}
+{"ts": "2026-11-25T18:06:22.325560+00:00", "level": "INFO", "service": "cloudledger", "version": "1.0.0", "slot": "primary", "method": "GET", "path": "/health", "status": 200, "latency_ms": 0.12, "trace_id": "86ca10362e22"}
+{"ts": "2026-11-25T18:06:22.332114+00:00", "level": "INFO", "service": "cloudledger", "version": "1.0.0", "slot": "primary", "method": "GET", "path": "/health", "status": 200, "latency_ms": 0.1, "trace_id": "dd97ac8f992e"}
+{"ts": "2026-11-25T18:06:22.340225+00:00", "level": "INFO", "service": "cloudledger", "version": "1.0.0", "slot": "primary", "method": "GET", "path": "/health", "status": 200, "latency_ms": 0.24, "trace_id": "998e5b3d5577"}
+{"ts": "2026-11-25T18:06:22.347550+00:00", "level": "INFO", "service": "cloudledger", "version": "1.0.0", "slot": "primary", "method": "GET", "path": "/health", "status": 200, "latency_ms": 0.18, "trace_id": "6e94b73231fe"}
+>>> OBSERVABILITY_VERIFIED prometheus=UP alerts=LOADED json_logs=CAPTURED
